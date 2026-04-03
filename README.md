@@ -24,6 +24,22 @@ There are two tiers:
 
 T1 alone covers common operations. T4 handles the long tail. Both run locally. Nothing leaves your machine.
 
+## Why
+
+The translation layer is scaffolding. T4 shows you the command. T1 pattern-matches it. Eventually you type it yourself. The inference stops. That's the point -- a shell that teaches you to stop needing it.
+
+The telos is literacy, not dependency. You graduate from "show my files" to `ls`, from subtractOS to `claude -p` (or whatever the real prompt is). No wrapper. No subscription. No intermediary between you and the machine.
+
+A lookup table is microseconds and nanowatts. Every layer of abstraction between a human and a syscall multiplies energy by orders of magnitude. subtractOS is the exit from that trajectory.
+
+$$E_{\text{subtract}}(t) \to E_{\text{syscall}} \approx 10^{-5} \text{ J} \quad \text{as learned commands grow}$$
+
+$$E_{\text{local}} = 10^{2} \text{ J/request} \quad \text{(flat, per inference)}$$
+
+$$E_{\text{api}} \geq 10^{4} \text{ J/request} \quad \text{(flat or increasing with orchestration)}$$
+
+The first equation decreases over time. The other two don't. subtractOS is the only architecture with a thermodynamic argument for its own obsolescence.
+
 ## Install
 
 ```
