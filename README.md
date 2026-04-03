@@ -27,7 +27,7 @@ T1 alone covers common operations. T4 handles the long tail. Both run locally. N
 ## Install
 
 ```
-git clone https://github.com/03-git/subtract.git
+git clone https://github.com/03-git/subtractOS.git
 cd subtract
 ./install.sh
 ```
