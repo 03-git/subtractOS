@@ -1,0 +1,8 @@
+
+  subtract OS -- type what you mean
+
+  try: "what time is it" or "show my files" or "how much disk space"
+  your intent table: ~/.subtract/lookup.tsv (edit it, it's yours)
+  escape hatch: full path works (/usr/bin/find, /usr/bin/make)
+  uninstall: remove the source line from ~/.bashrc, delete ~/.subtract/
+

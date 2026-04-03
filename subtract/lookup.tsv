@@ -1,0 +1,72 @@
+# subtract OS -- intent lookup table
+# format: glob_pattern<TAB>command
+# first match wins. specific before general.
+# edit this file to teach your machine new intents.
+#
+# --- files ---
+what*in*this*directory	ls .
+what*in*current*directory	ls .
+what*files*are*here	ls .
+list*files	ls .
+show*files	ls .
+show*hidden*files	ls -la
+show*all*files	ls -la
+show*file*sizes	ls -lh
+list*home	ls ~/
+what*in*home*directory	ls ~/
+# desktop/downloads: remove these if your system doesn't have them
+show*desktop	ls ~/Desktop/
+show*downloads	ls ~/Downloads/
+#
+# --- navigation ---
+go*home	cd ~/
+go*to*home	cd ~/
+go*back	cd ..
+go*up	cd ..
+#
+# --- disk ---
+how*much*disk*space	df -h
+disk*space	df -h
+disk*space*left	df -h
+check*disk*space	df -h
+show*disk*usage	df -h
+how*much*space	df -h
+how*big*is*this*folder	du -sh .
+disk*usage	du -sh *
+#
+# --- processes ---
+show*running*processes	ps -eo pid,%cpu,%mem,args --sort=-%cpu | head -20
+show*processes	ps -eo pid,%cpu,%mem,args --sort=-%cpu | head -20
+what*is*running	ps -eo pid,%cpu,%mem,args --sort=-%cpu | head -20
+kill*process	echo "usage: kill <PID>"
+#
+# --- time ---
+what*time*is*it	date +%T
+what*is*the*time	date +%T
+what*day*is*it	date +%A
+what*is*the*date	date +%Y-%m-%d
+what*is*today	date "+%A %Y-%m-%d"
+#
+# --- network ---
+what*is*my*ip	hostname -I
+show*my*ip	hostname -I
+am*i*online	ping -c1 -W2 8.8.8.8 && echo "yes" || echo "no"
+#
+# --- system ---
+how*much*memory	free -h
+how*much*ram	free -h
+show*memory	free -h
+who*am*i	whoami
+what*is*my*username	whoami
+what*machine*is*this	hostname
+show*system*info	uname -a
+what*os*is*this	cat /etc/os-release
+#
+# --- history ---
+show*command*history	history
+what*did*i*do	history 20
+last*commands	history 20
+#
+# --- cleanup ---
+clear*screen	clear
+clear*terminal	clear
