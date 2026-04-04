@@ -1,6 +1,6 @@
 # subtractOS
 
-A Linux shell where you type what you mean.
+An operating system where you say what you mean.
 
 ```
 $ what time is it
@@ -15,7 +15,7 @@ Filesystem      Size  Used Avail Use% Mounted on
 
 ## What it does
 
-You type natural language at a bash prompt. A translation layer converts your intent to the right command. You see the command before it runs. Press enter to confirm, `n` to cancel.
+Type, talk, convey your intent. A translation layer converts it to the right command. You see the command before it runs. Press enter to confirm, `n` to cancel.
 
 There are two tiers:
 
@@ -26,7 +26,7 @@ T1 alone covers common operations. T4 handles the long tail. Both run locally. N
 
 ## Why
 
-The translation layer is scaffolding. T4 shows you the command. T1 pattern-matches it. Eventually you type it yourself. The inference stops. That's the point -- a shell that teaches you to stop needing it.
+The translation layer is scaffolding. T4 shows you the command. T1 pattern-matches it. Eventually you type it yourself. The inference stops. That's the point -- a system that you stop needing and start using.
 
 The telos is literacy, not dependency. You graduate from "show my files" to `ls`, from subtractOS to `claude -p` (or whatever the real prompt is). No wrapper. No subscription. No intermediary between you and the machine.
 
@@ -57,7 +57,7 @@ The entire system is two files in `~/.subtract/`:
 - **handler.sh** -- bash functions that intercept unknown commands and translate them. Sourced in `.bashrc`.
 - **lookup.tsv** -- tab-separated intent patterns and commands. Glob syntax. First match wins. Edit this file to teach your machine new intents.
 
-When you type something that isn't a real command, bash calls `command_not_found_handle`, which is overridden by the handler. The handler tries T1 (lookup), then T4 (model), then tells you it doesn't know.
+When you convey something that isn't a real command, bash calls `command_not_found_handle`, which is overridden by the handler. The handler tries T1 (lookup), then T4 (model), then tells you it doesn't know.
 
 Destructive commands (`rm`, `dd`, `mkfs`, etc.) always require explicit `y` confirmation.
 
