@@ -4,11 +4,11 @@ An operating system that does what you mean.
 
 ```
 $ what time is it
-[T1] date +%T
+[T1:stdout] date +%T
 14:32:07
 
 $ how much disk space
-[T1] df -h
+[T1:stdout] df -h
 Filesystem      Size  Used Avail Use% Mounted on
 /dev/sda1       477G  8.2G  445G   2% /
 ```
@@ -20,13 +20,13 @@ Ask what you want. A translation layer converts it to the right command. You see
 There are two tiers:
 
 - **T1 (lookup table):** Instant. Pattern-matches your input against `~/.subtract/lookup.tsv`. No model, no network, no dependencies. This is the product on constrained hardware.
-- **T4 (generative model):** Optional. If [ollama](https://ollama.com) is installed with a pulled model, intents that miss T1 fall to a local language model that generates the command. Slower (300ms-1s) but handles anything.
+- **T2 (local model):** Optional. If [ollama](https://ollama.com) is installed with a pulled model, intents that miss T1 fall to a local language model that generates the command. Slower (300ms-1s) but handles anything.
 
-T1 alone covers common operations. T4 handles the long tail. Both run locally. Nothing leaves your machine.
+T1 alone covers common operations. T2 handles the long tail. Both run locally. Nothing leaves your machine.
 
 ## Why
 
-The translation layer is scaffolding. T4 shows you the command. T1 pattern-matches it. Eventually you type it yourself. The inference stops. That's the point -- a system that you stop needing and start using.
+The translation layer is scaffolding. T2 shows you the command. T1 pattern-matches it. Eventually you type it yourself. The inference stops. That's the point -- a system that you stop needing and start using.
 
 The telos is literacy, not dependency. You graduate from "show my files" to `ls`, from subtractOS to `claude -p` (or whatever the real prompt is). No wrapper. No subscription. No intermediary between you and the machine.
 
@@ -59,7 +59,7 @@ The entire system is two files in `~/.subtract/`:
 - **handler.sh** -- bash functions that intercept unknown commands and translate them. Sourced in `.bashrc`.
 - **lookup.tsv** -- tab-separated intent patterns and commands. Glob syntax. First match wins. Edit this file to teach your machine new intents.
 
-When you convey something that isn't a real command, bash calls `command_not_found_handle`, which is overridden by the handler. The handler tries T1 (lookup), then T4 (model), then tells you it doesn't know.
+When you convey something that isn't a real command, bash calls `command_not_found_handle`, which is overridden by the handler. The handler tries T1 (lookup), then T2 (local model), then tells you it doesn't know.
 
 Destructive commands (`rm`, `dd`, `mkfs`, etc.) always require explicit `y` confirmation.
 

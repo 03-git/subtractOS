@@ -38,12 +38,12 @@ fi
 echo "installed to $SUBTRACT_DIR"
 echo "open a new terminal or run: source ~/.bashrc"
 
-# optional: ollama for tier 4
+# optional: ollama for tier 2
 if ! command -v ollama &>/dev/null; then
     echo ""
     read -r -p "install ollama for model-backed translation? [y/n] " yn
     if [ "$yn" = "y" ]; then
-        # jq needed for JSON handling in T4 path
+        # jq needed for JSON handling in T2 path
         if ! command -v jq &>/dev/null; then
             echo "installing jq..."
             sudo apt-get install -y jq 2>/dev/null || sudo yum install -y jq 2>/dev/null || echo "please install jq manually."

@@ -2,7 +2,7 @@
 # type what you mean. the computer figures out the command.
 #
 # tier 1: lookup table. instant, local, no dependencies.
-# tier 4: generative model (optional). requires ollama + a pulled model.
+# tier 2: local generative model (optional). requires ollama + a pulled model.
 #
 # everything lives in ~/.subtract/. read it, edit it, delete it.
 
@@ -61,7 +61,7 @@ __subtract_lookup() {
     return 1
 }
 
-# --- tier 4: generative model (optional) ---
+# --- tier 2: local generative model (optional) ---
 
 __subtract_generate() {
     # requires: ollama running on localhost:11434, curl, jq
@@ -140,10 +140,10 @@ __subtract_handle() {
         tag="${result%%	*}"
         cmd="${result#*	}"
     else
-        # tier 4: generative model (if available)
+        # tier 2: local generative model (if available)
         cmd=$(__subtract_generate "$input")
         if [ -n "$cmd" ]; then
-            tier="T4"
+            tier="T2"
             tag="stdout"
         fi
     fi
