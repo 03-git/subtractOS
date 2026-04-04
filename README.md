@@ -1,6 +1,6 @@
 # subtractOS
 
-An operating system where you say what you mean.
+An operating system that does what you mean.
 
 ```
 $ what time is it
