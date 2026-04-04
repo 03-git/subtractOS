@@ -39,12 +39,22 @@ PROMPT_COMMAND="__subtract_capture;${PROMPT_COMMAND:+$PROMPT_COMMAND}"
 
 __subtract_lookup() {
     local input_lower="${1,,}"
-    while IFS=$'\t' read -r pattern cmd; do
+    local pattern tag cmd rest
+    while IFS=$'\t' read -r pattern rest; do
         [[ "$pattern" =~ ^#.*$ || -z "$pattern" ]] && continue
         local pattern_lower="${pattern,,}"
         # shellcheck disable=SC2254
         if [[ "$input_lower" == $pattern_lower ]]; then
-            echo "$cmd"
+            # three-column: pattern<TAB>[tag]<TAB>command
+            # two-column:   pattern<TAB>command (backwards compat)
+            if [[ "$rest" =~ ^\[([a-z]+)\] ]]; then
+                tag="${BASH_REMATCH[1]}"
+                cmd="${rest#*$'\t'}"
+            else
+                tag="stdout"
+                cmd="$rest"
+            fi
+            echo "${tag}	${cmd}"
             return 0
         fi
     done < "$SUBTRACT_LOOKUP"
@@ -108,17 +118,20 @@ __subtract_is_destructive() {
 
 __subtract_handle() {
     local input="$*"
-    local cmd tier output
+    local cmd tier tag output result
 
-    # tier 1: local lookup
-    cmd=$(__subtract_lookup "$input")
-    if [ -n "$cmd" ]; then
+    # tier 1: local lookup (returns tag<TAB>cmd)
+    result=$(__subtract_lookup "$input")
+    if [ -n "$result" ]; then
         tier="T1"
+        tag="${result%%	*}"
+        cmd="${result#*	}"
     else
         # tier 4: generative model (if available)
         cmd=$(__subtract_generate "$input")
         if [ -n "$cmd" ]; then
             tier="T4"
+            tag="stdout"
         fi
     fi
 
@@ -128,16 +141,44 @@ __subtract_handle() {
             read -r -p "[y/n] " confirm
             [ "$confirm" != "y" ] && { echo "aborted."; return 1; }
         else
-            echo "[$tier] $cmd"
+            echo "[$tier:$tag] $cmd"
             read -r -p "[enter/n] " confirm
             [ "$confirm" = "n" ] && return 1
         fi
-        output=$(eval "$cmd" 2>&1)
-        local exit_code=$?
-        echo "$output"
-        if [ $exit_code -eq 0 ]; then
-            SUBTRACT_LAST_OUTPUT="output of '$cmd': $(__subtract_truncate "$output")"
-        fi
+
+        case "$tag" in
+            canvas)
+                # two [canvas] patterns:
+                #   web-as-apps: cmd is subtract-canvas (launches renderer directly, no pipe)
+                #   generators:  cmd produces HTML, handler pipes output to subtract-canvas
+                # subtract-canvas outputs ACTION: lines on stdout when user taps
+                local action
+                output=$(eval "$cmd" 2>&1)
+                local exit_code=$?
+                if [ $exit_code -eq 0 ] && [ -n "$output" ]; then
+                    action=$(echo "$output" | subtract-canvas -)
+                else
+                    action=$(eval "$cmd")
+                fi
+                # canvas actions are trusted (we control the templates)
+                # eval directly instead of routing back through lookup
+                if [ -n "$action" ]; then
+                    echo "[action] $action"
+                    eval "$action"
+                fi
+                ;;
+            player)
+                eval "$cmd"
+                ;;
+            *)
+                output=$(eval "$cmd" 2>&1)
+                local exit_code=$?
+                echo "$output"
+                if [ $exit_code -eq 0 ]; then
+                    SUBTRACT_LAST_OUTPUT="output of '$cmd': $(__subtract_truncate "$output")"
+                fi
+                ;;
+        esac
         _SUBTRACT_FROM_HANDLER=1
     else
         echo "not found: $input"
