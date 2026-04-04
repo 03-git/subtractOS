@@ -101,6 +101,46 @@ __subtract_generate() {
     echo "$result"
 }
 
+# --- tier 4: cloud escalation (optional) ---
+
+__subtract_cloud() {
+    local cloud_ai
+    cloud_ai=$(cat "$SUBTRACT_DIR/cloud_ai" 2>/dev/null)
+    [ -z "$cloud_ai" ] && return 1
+
+    local input="$1"
+    local context=""
+    if [ -n "$SUBTRACT_LAST_OUTPUT" ]; then
+        context=$(__subtract_truncate "$SUBTRACT_LAST_OUTPUT")
+    fi
+
+    local ctx_str=""
+    [ -n "$context" ] && ctx_str=" Context: $context."
+
+    local prompt="Translate to a single bash command. Output ONLY the command, nothing else. No explanation. No markdown. No code fences.${ctx_str} Input: ${input}"
+
+    local result
+    case "$cloud_ai" in
+        claude)
+            command -v claude &>/dev/null || return 1
+            result=$(claude -p "$prompt" 2>/dev/null)
+            ;;
+        *)
+            # codex, gemini: stub for when CLIs exist
+            return 1
+            ;;
+    esac
+
+    [ -z "$result" ] && return 1
+
+    # strip markdown fences if model ignores the instruction
+    result="${result//\`\`\`bash/}"
+    result="${result//\`\`\`/}"
+    result=$(echo "$result" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+
+    echo "$result"
+}
+
 # --- destructive command check ---
 
 __subtract_is_destructive() {
@@ -145,6 +185,13 @@ __subtract_handle() {
         if [ -n "$cmd" ]; then
             tier="T2"
             tag="stdout"
+        else
+            # tier 4: cloud escalation (if configured)
+            cmd=$(__subtract_cloud "$input")
+            if [ -n "$cmd" ]; then
+                tier="T4"
+                tag="stdout"
+            fi
         fi
     fi
 
