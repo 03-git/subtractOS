@@ -6,7 +6,7 @@
 #
 # everything lives in ~/.subtract/. read it, edit it, delete it.
 
-SUBTRACT_DIR="$HOME/.subtract"
+SUBTRACT_DIR="${SUBTRACT_DIR:-$HOME/.subtract}"
 SUBTRACT_LOOKUP="$SUBTRACT_DIR/lookup.tsv"
 SUBTRACT_LAST_OUTPUT=""
 SUBTRACT_MAX_CONTEXT=20
