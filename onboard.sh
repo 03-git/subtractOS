@@ -188,7 +188,8 @@ case "$ai_choice" in
     2)
         ai_name="codex"
         if ! command -v codex &>/dev/null; then
-            echo "codex CLI not found. install it manually or skip."
+            echo "codex CLI not found. install: npm install -g @openai/codex"
+            echo "  (requires npm/Node.js. subtractOS doesn't ship Node. you're adding a dependency tree.)"
         fi
         echo ""
         read -rs -p "enter your OpenAI API key (or press enter to skip): " api_key
@@ -197,7 +198,8 @@ case "$ai_choice" in
     3)
         ai_name="gemini"
         if ! command -v gemini &>/dev/null; then
-            echo "gemini CLI not found. install it manually or skip."
+            echo "gemini CLI not found. install: npm install -g @google/gemini-cli"
+            echo "  (requires npm/Node.js. subtractOS doesn't ship Node. you're adding a dependency tree.)"
         fi
         echo ""
         read -rs -p "enter your Google AI API key (or press enter to skip): " api_key
