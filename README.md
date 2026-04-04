@@ -15,7 +15,7 @@ Filesystem      Size  Used Avail Use% Mounted on
 
 ## What it does
 
-Type, talk, convey your intent. A translation layer converts it to the right command. You see the command before it runs. Press enter to confirm, `n` to cancel.
+Ask what you want. A translation layer converts it to the right command. You see the command before it runs. Press enter to confirm, `n` to cancel.
 
 There are two tiers:
 
@@ -30,7 +30,9 @@ The translation layer is scaffolding. T4 shows you the command. T1 pattern-match
 
 The telos is literacy, not dependency. You graduate from "show my files" to `ls`, from subtractOS to `claude -p` (or whatever the real prompt is). No wrapper. No subscription. No intermediary between you and the machine.
 
-A lookup table is microseconds and nanowatts. Every layer of abstraction between a human and a syscall multiplies energy by orders of magnitude. subtractOS is the exit from that trajectory.
+A lookup table is microseconds and nanowatts. Every layer of abstraction between a human and a syscall multiplies energy by orders of magnitude. The energy cost of subtractOS decreases over time. The energy cost of local inference and API calls doesn't. subtractOS is the only architecture with a thermodynamic argument for its own obsolescence.
+
+### Energy model
 
 $$E_{\text{subtract}}(t) \to E_{\text{syscall}} \approx 10^{-5} \text{ J} \quad \text{as learned commands grow}$$
 
@@ -38,17 +40,17 @@ $$E_{\text{local}} = 10^{2} \text{ J/request} \quad \text{(flat, per inference)}
 
 $$E_{\text{api}} \geq 10^{4} \text{ J/request} \quad \text{(flat or increasing with orchestration)}$$
 
-The first equation decreases over time. The other two don't. subtractOS is the only architecture with a thermodynamic argument for its own obsolescence.
-
 ## Install
 
 ```
 git clone https://github.com/03-git/subtractOS.git
-cd subtract
+cd subtractOS
 ./install.sh
 ```
 
 Open a new terminal. Ask "what time is it".
+
+> **Note:** `find`, `make`, `open`, and other real binaries run normally. See [Binary collisions](#binary-collisions) if you want the handler to intercept them.
 
 ## How it works
 
