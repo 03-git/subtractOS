@@ -1,4 +1,4 @@
-# subtract OS
+# subtractOS
 
 A Linux shell where you type what you mean.
 
