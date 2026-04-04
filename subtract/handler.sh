@@ -122,16 +122,11 @@ __subtract_handle() {
 
     # onboard gate: if not yet configured, run onboard first (interactive only)
     if [ ! -f "$SUBTRACT_DIR/.onboarded" ] && [[ -t 0 ]]; then
-        echo "first time? let me set up."
         bash "$SUBTRACT_DIR/onboard.sh" < /dev/tty
         if [ -f "$SUBTRACT_DIR/.onboarded" ]; then
-            echo ""
-            read -r -p "you said: $input [enter/rephrase] " rephrased < /dev/tty
-            if [ -n "$rephrased" ]; then
-                __subtract_handle $rephrased
-            else
-                __subtract_handle "$@"
-            fi
+            echo "you said: $input"
+            read -r -p "[enter to run / ctrl-c to skip] " _ < /dev/tty
+            __subtract_handle "$@"
         else
             echo "setup deferred. type 'reconfigure' when ready."
         fi
