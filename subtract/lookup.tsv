@@ -73,6 +73,9 @@ last*commands	history 20
 clear*screen	clear
 clear*terminal	clear
 #
+# --- reconfigure ---
+reconfigure*	rm -f $HOME/.subtract/.onboarded && echo "type anything to re-onboard"
+#
 # --- canvas (HTML rendered fullscreen via subtract-canvas) ---
 # two patterns use [canvas]:
 #   1. web-as-apps: command IS subtract-canvas (renders URL directly)

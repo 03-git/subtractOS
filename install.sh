@@ -12,6 +12,7 @@ SOURCE_LINE='[ -f ~/.subtract/handler.sh ] && source ~/.subtract/handler.sh'
 mkdir -p "$SUBTRACT_DIR"
 cp "$SCRIPT_DIR/subtract/handler.sh" "$SUBTRACT_DIR/"
 cp "$SCRIPT_DIR/subtract/motd" "$SUBTRACT_DIR/"
+cp "$SCRIPT_DIR/onboard.sh" "$SUBTRACT_DIR/"
 
 # only copy lookup.tsv if it doesn't exist (don't overwrite user edits)
 if [ ! -f "$SUBTRACT_DIR/lookup.tsv" ]; then

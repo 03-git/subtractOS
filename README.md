@@ -48,7 +48,7 @@ cd subtractOS
 ./install.sh
 ```
 
-Open a new terminal. Ask "what time is it".
+Open a new terminal. Ask it something. `ctrl-c` to skip setup. `reconfigure` to redo it.
 
 > **Note:** `find`, `make`, `open`, and other real binaries run normally. See [Binary collisions](#binary-collisions) if you want the handler to intercept them.
 

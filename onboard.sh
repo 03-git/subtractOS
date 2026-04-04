@@ -2,8 +2,6 @@
 # subtract OS onboarding
 # runs after install.sh on a working subtract system.
 # via negativa: what do you want to remove, not what do you want to configure.
-set -e
-
 SUBTRACT_DIR="$HOME/.subtract"
 SUBTRACT_KIWIX_PORT="${SUBTRACT_KIWIX_PORT:-8888}"
 if ! [[ "$SUBTRACT_KIWIX_PORT" =~ ^[0-9]+$ ]] || [ "$SUBTRACT_KIWIX_PORT" -lt 1 ] || [ "$SUBTRACT_KIWIX_PORT" -gt 65535 ]; then
@@ -336,4 +334,5 @@ echo ""
 [ -f "$SUBTRACT_DIR/api_key" ] && echo "api key: stored"
 command -v kiwix-serve &>/dev/null && echo "kiwix: installed"
 echo ""
+touch "$SUBTRACT_DIR/.onboarded"
 echo "type what you want the computer to do."

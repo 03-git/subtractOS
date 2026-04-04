@@ -120,6 +120,24 @@ __subtract_handle() {
     local input="$*"
     local cmd tier tag output result
 
+    # onboard gate: if not yet configured, run onboard first (interactive only)
+    if [ ! -f "$SUBTRACT_DIR/.onboarded" ] && [[ -t 0 ]]; then
+        echo "first time? let me set up."
+        bash "$SUBTRACT_DIR/onboard.sh" < /dev/tty
+        if [ -f "$SUBTRACT_DIR/.onboarded" ]; then
+            echo ""
+            read -r -p "you said: $input [enter/rephrase] " rephrased < /dev/tty
+            if [ -n "$rephrased" ]; then
+                __subtract_handle $rephrased
+            else
+                __subtract_handle "$@"
+            fi
+        else
+            echo "setup deferred. type 'reconfigure' when ready."
+        fi
+        return
+    fi
+
     # tier 1: local lookup (returns tag<TAB>cmd)
     result=$(__subtract_lookup "$input")
     if [ -n "$result" ]; then
