@@ -48,7 +48,7 @@ cd subtract
 ./install.sh
 ```
 
-Open a new terminal. Type "what time is it".
+Open a new terminal. Ask "what time is it".
 
 ## How it works
 
