@@ -160,7 +160,11 @@ __subtract_is_destructive() {
 
 __subtract_kiwix() {
     local query="$1"
-    curl -s --connect-timeout 1 "$SUBTRACT_KIWIX/search?pattern=$(printf '%s' "$query" | sed 's/ /+/g')&pageLength=1" 2>/dev/null \
+    [ -z "$query" ] && return 1
+    local encoded
+    encoded=$(printf '%s' "$query" | jq -sRr @uri 2>/dev/null)
+    [ -z "$encoded" ] && return 1
+    curl -s --connect-timeout 1 --max-time 3 "$SUBTRACT_KIWIX/search?pattern=${encoded}&pageLength=1" 2>/dev/null \
         | sed -n 's/.*<cite>\(.*\)<\/cite>.*/\1/p' \
         | sed 's/<[^>]*>//g; s/&amp;/\&/g; s/&lt;/</g; s/&gt;/>/g; s/&#39;/'"'"'/g; s/&quot;/"/g' \
         | head -1
@@ -188,10 +192,12 @@ __subtract_handle() {
     # kiwix: questions route to local corpus, not model
     if [[ "$input" == *\? ]]; then
         local query="${input%\?}"
-        query="${query#what is }"
-        query="${query#what are }"
-        query="${query#who is }"
-        query="${query#who was }"
+        local query_lower="${query,,}"
+        query_lower="${query_lower#what is }"
+        query_lower="${query_lower#what are }"
+        query_lower="${query_lower#who is }"
+        query_lower="${query_lower#who was }"
+        query="$query_lower"
         local snippet
         snippet=$(__subtract_kiwix "$query")
         if [ -n "$snippet" ]; then
