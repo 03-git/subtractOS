@@ -23,9 +23,11 @@ SUBTRACT_DESTRUCTIVE="rm rmdir dd mkfs chmod chown shred truncate"
 
 # --- internal helpers ---
 
+__subtract_lower() { printf '%s' "$1" | tr '[:upper:]' '[:lower:]'; }
+
 __subtract_truncate() {
     local lines
-    lines=$(echo "$1" | wc -l)
+    lines=$(echo "$1" | wc -l | tr -d ' ')
     if [ "$lines" -gt "$SUBTRACT_MAX_CONTEXT" ]; then
         echo "$1" | tail -n "$SUBTRACT_MAX_CONTEXT"
         echo "[truncated: $lines lines total]"
@@ -55,7 +57,8 @@ __subtract_skills_stale() {
 }
 
 __subtract_strip_prefix() {
-    local input="${1,,}"
+    local input
+    input=$(__subtract_lower "$1")
     local prefix
     # try each skills prefix; return the residual if one matches
     while IFS='|' read -ra prefixes; do
@@ -97,7 +100,7 @@ __subtract_skills() {
     local stopwords=" a an and are at be by do for from how i if in is it me my no not of on or so the to up us we "
     local -a search_tokens
     for token in "${tokens[@]}"; do
-        token="${token,,}"
+        token=$(__subtract_lower "$token")
         [ ${#token} -lt 3 ] && continue
         case "$stopwords" in *" $token "*) continue ;; esac
         search_tokens+=("$token")
@@ -120,7 +123,7 @@ __subtract_skills() {
 
     # count matches
     local count
-    count=$(echo "$candidates" | wc -l)
+    count=$(echo "$candidates" | wc -l | tr -d ' ')
 
     if [ "$count" -eq 1 ]; then
         # single match: display it
@@ -152,11 +155,13 @@ __subtract_skills() {
 # --- tier 1: lookup table ---
 
 __subtract_lookup() {
-    local input_lower="${1,,}"
+    local input_lower
+    input_lower=$(__subtract_lower "$1")
     local pattern tag cmd rest
     while IFS=$'\t' read -r pattern rest; do
         [[ "$pattern" =~ ^#.*$ || -z "$pattern" ]] && continue
-        local pattern_lower="${pattern,,}"
+        local pattern_lower
+        pattern_lower=$(__subtract_lower "$pattern")
         # shellcheck disable=SC2254
         if [[ "$input_lower" == $pattern_lower ]]; then
             # three-column: pattern<TAB>[tag]<TAB>command
@@ -302,7 +307,8 @@ __subtract_handle() {
     fi
 
     # --- skill management commands (before main routing chain) ---
-    local input_lower="${input,,}"
+    local input_lower
+    input_lower=$(__subtract_lower "$input")
     case "$input_lower" in
         "skills")
             echo "[skill] domains:"
@@ -451,7 +457,8 @@ TMPL
     # kiwix: questions route to local corpus
     if [ -z "$cmd" ] && [[ "$input" == *\? ]]; then
         local query="${input%\?}"
-        local query_lower="${query,,}"
+        local query_lower
+        query_lower=$(__subtract_lower "$query")
         query_lower="${query_lower#what is }"
         query_lower="${query_lower#what are }"
         query_lower="${query_lower#who is }"
@@ -472,7 +479,8 @@ TMPL
     # kiwix: also try bare "what is" / "who is" without trailing ?
     if [ -z "$cmd" ]; then
         local kiwix_query=""
-        local input_lower="${input,,}"
+        local input_lower
+        input_lower=$(__subtract_lower "$input")
         case "$input_lower" in
             "what is "*|"what are "*|"who is "*|"who was "*|"when was "*|"when did "*|"where is "*|"define "*)
                 case "$input_lower" in

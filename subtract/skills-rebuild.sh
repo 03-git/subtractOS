@@ -44,7 +44,7 @@ find "$SKILLS_DIR" -name '*.md' -type f | while read -r filepath; do
 
     # combine all token sources, normalize to lowercase, deduplicate
     all_text="$local_aliases, $local_tags, $filename_tokens"
-    all_text="${all_text,,}"
+    all_text=$(printf '%s' "$all_text" | tr '[:upper:]' '[:lower:]')
 
     # split on comma or space, trim, filter stopwords, deduplicate, write one line per token
     echo "$all_text" | tr ',' '\n' | tr ' ' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | \
@@ -57,4 +57,4 @@ find "$SKILLS_DIR" -name '*.md' -type f | while read -r filepath; do
 done >> "$INDEX_FILE"
 
 sort -o "$INDEX_FILE" "$INDEX_FILE"
-echo "index rebuilt: $(wc -l < "$INDEX_FILE") entries from $(find "$SKILLS_DIR" -name '*.md' -type f | wc -l) files"
+echo "index rebuilt: $(wc -l < "$INDEX_FILE" | tr -d ' ') entries from $(find "$SKILLS_DIR" -name '*.md' -type f | wc -l | tr -d ' ') files"
