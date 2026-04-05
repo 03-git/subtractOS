@@ -1,7 +1,7 @@
 ---
 aliases: oauth authorization code, oauth pkce, oauth login flow, get oauth token, authorization code grant
 tags: auth, oauth, api, credentials
-verified: false
+verified: true
 source: RFC 6749 Section 4.1, RFC 7636
 ---
 

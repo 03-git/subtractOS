@@ -1,7 +1,7 @@
 ---
 aliases: dns lookup, dig command, resolve dns, query dns records, check dns, nslookup, dns propagation
 tags: dns, network, infra, resolution
-verified: false
+verified: true
 source: RFC 1035, RFC 8484
 ---
 

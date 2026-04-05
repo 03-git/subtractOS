@@ -1,7 +1,7 @@
 ---
 aliases: validate ssl cert, check certificate, verify certificate chain, x509 validation, cert expired, tls certificate check
 tags: auth, certificate, tls, x509, security
-verified: false
+verified: true
 source: RFC 5280
 ---
 

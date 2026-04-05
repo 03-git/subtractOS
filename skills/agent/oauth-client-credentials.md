@@ -1,7 +1,7 @@
 ---
 aliases: client credentials grant, server to server auth, oauth machine auth, service account token
 tags: auth, oauth, api, credentials
-verified: false
+verified: true
 source: RFC 6749 Section 4.4
 ---
 
