@@ -3,11 +3,13 @@
 #
 # tier 1: lookup table. instant, local, no dependencies.
 # tier 2: local generative model (optional). requires ollama + a pulled model.
+# kiwix: questions (input ending in ?) route to local kiwix corpus.
 #
 # everything lives in ~/.subtract/. read it, edit it, delete it.
 
 SUBTRACT_DIR="${SUBTRACT_DIR:-$HOME/.subtract}"
 SUBTRACT_LOOKUP="$SUBTRACT_DIR/lookup.tsv"
+SUBTRACT_KIWIX="${SUBTRACT_KIWIX:-http://localhost:8888}"
 SUBTRACT_LAST_OUTPUT=""
 SUBTRACT_MAX_CONTEXT=20
 
@@ -154,6 +156,16 @@ __subtract_is_destructive() {
     return 1
 }
 
+# --- kiwix: local corpus lookup for questions ---
+
+__subtract_kiwix() {
+    local query="$1"
+    curl -s --connect-timeout 1 "$SUBTRACT_KIWIX/search?pattern=$(printf '%s' "$query" | sed 's/ /+/g')&pageLength=1" 2>/dev/null \
+        | sed -n 's/.*<cite>\(.*\)<\/cite>.*/\1/p' \
+        | sed 's/<[^>]*>//g; s/&amp;/\&/g; s/&lt;/</g; s/&gt;/>/g; s/&#39;/'"'"'/g; s/&quot;/"/g' \
+        | head -1
+}
+
 # --- core handler ---
 
 __subtract_handle() {
@@ -171,6 +183,24 @@ __subtract_handle() {
             echo "setup deferred. type 'reconfigure' when ready."
         fi
         return
+    fi
+
+    # kiwix: questions route to local corpus, not model
+    if [[ "$input" == *\? ]]; then
+        local query="${input%\?}"
+        query="${query#what is }"
+        query="${query#what are }"
+        query="${query#who is }"
+        query="${query#who was }"
+        local snippet
+        snippet=$(__subtract_kiwix "$query")
+        if [ -n "$snippet" ]; then
+            echo "[kiwix] $snippet"
+            SUBTRACT_LAST_OUTPUT="kiwix answer for '$input': $(__subtract_truncate "$snippet")"
+            _SUBTRACT_FROM_HANDLER=1
+            return 0
+        fi
+        # kiwix miss: fall through to normal tiers
     fi
 
     # tier 1: local lookup (returns tag<TAB>cmd)
