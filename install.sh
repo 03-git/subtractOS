@@ -12,6 +12,7 @@ SOURCE_LINE='[ -f ~/.subtract/handler.sh ] && source ~/.subtract/handler.sh'
 mkdir -p "$SUBTRACT_DIR"
 cp "$SCRIPT_DIR/subtract/handler.sh" "$SUBTRACT_DIR/"
 cp "$SCRIPT_DIR/subtract/motd" "$SUBTRACT_DIR/"
+cp "$SCRIPT_DIR/subtract/skills-rebuild.sh" "$SUBTRACT_DIR/"
 cp "$SCRIPT_DIR/onboard.sh" "$SUBTRACT_DIR/"
 
 # only copy lookup.tsv if it doesn't exist (don't overwrite user edits)
@@ -19,6 +20,14 @@ if [ ! -f "$SUBTRACT_DIR/lookup.tsv" ]; then
     cp "$SCRIPT_DIR/subtract/lookup.tsv" "$SUBTRACT_DIR/"
 else
     echo "lookup.tsv already exists, keeping yours."
+fi
+
+# copy skills if not already present (don't overwrite user edits)
+if [ ! -d "$SUBTRACT_DIR/skills" ]; then
+    cp -r "$SCRIPT_DIR/skills" "$SUBTRACT_DIR/skills"
+    bash "$SUBTRACT_DIR/skills-rebuild.sh"
+else
+    echo "skills directory already exists, keeping yours."
 fi
 
 # add source line to .bashrc if not already present

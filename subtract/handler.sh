@@ -9,9 +9,14 @@
 
 SUBTRACT_DIR="${SUBTRACT_DIR:-$HOME/.subtract}"
 SUBTRACT_LOOKUP="$SUBTRACT_DIR/lookup.tsv"
+SUBTRACT_SKILLS="$SUBTRACT_DIR/skills"
 SUBTRACT_KIWIX="${SUBTRACT_KIWIX:-http://localhost:8888}"
 SUBTRACT_LAST_OUTPUT=""
 SUBTRACT_MAX_CONTEXT=20
+
+# skills prefix patterns: procedural queries ("how do I X", "teach me X")
+# matched after T1, before kiwix. triggers grep against skills index.
+SUBTRACT_SKILLS_PREFIXES="how do i |how to |teach me |steps to |guide to |tutorial |tutorial for "
 
 # destructive verbs that always gate behind explicit confirmation
 SUBTRACT_DESTRUCTIVE="rm rmdir dd mkfs chmod chown shred truncate"
@@ -36,6 +41,113 @@ __subtract_capture() {
     _SUBTRACT_FROM_HANDLER=""
 }
 PROMPT_COMMAND="__subtract_capture;${PROMPT_COMMAND:+$PROMPT_COMMAND}"
+
+# --- skills: procedural knowledge lookup ---
+
+__subtract_skills_stale() {
+    # check if index needs rebuild: any .md file newer than index
+    local index="$SUBTRACT_SKILLS/.index"
+    [ ! -f "$index" ] && return 0
+    local newer
+    newer=$(find "$SUBTRACT_SKILLS" -name '*.md' -newer "$index" -print -quit 2>/dev/null)
+    [ -n "$newer" ] && return 0
+    return 1
+}
+
+__subtract_strip_prefix() {
+    local input="${1,,}"
+    local prefix
+    # try each skills prefix; return the residual if one matches
+    while IFS='|' read -ra prefixes; do
+        for prefix in "${prefixes[@]}"; do
+            prefix="${prefix# }"
+            [ -z "$prefix" ] && continue
+            if [[ "$input" == ${prefix}* ]]; then
+                echo "${input#$prefix}"
+                return 0
+            fi
+        done
+    done <<< "$SUBTRACT_SKILLS_PREFIXES"
+    return 1
+}
+
+__subtract_skills() {
+    local input="$1"
+    [ ! -d "$SUBTRACT_SKILLS" ] && return 1
+
+    local index="$SUBTRACT_SKILLS/.index"
+
+    # auto-rebuild if stale
+    if __subtract_skills_stale; then
+        bash "$SUBTRACT_DIR/skills-rebuild.sh" > /dev/null 2>&1 || true
+    fi
+    [ ! -f "$index" ] && return 1
+
+    # strip prefix to get query terms
+    local residual
+    residual=$(__subtract_strip_prefix "$input") || return 1
+    [ -z "$residual" ] && return 1
+
+    # tokenize residual, filter stopwords, grep index for each token
+    local -a tokens matches
+    local token
+    read -ra tokens <<< "$residual"
+
+    # find files matching ALL non-stopword tokens
+    local stopwords=" a an and are at be by do for from how i if in is it me my no not of on or so the to up us we "
+    local -a search_tokens
+    for token in "${tokens[@]}"; do
+        token="${token,,}"
+        [ ${#token} -lt 3 ] && continue
+        case "$stopwords" in *" $token "*) continue ;; esac
+        search_tokens+=("$token")
+    done
+    [ ${#search_tokens[@]} -eq 0 ] && return 1
+
+    # first token: get candidate files
+    local candidates
+    candidates=$(grep -i "^${search_tokens[0]}	" "$index" 2>/dev/null | cut -f2 | sort -u)
+    [ -z "$candidates" ] && return 1
+
+    # intersect with remaining tokens
+    local i
+    for ((i=1; i<${#search_tokens[@]}; i++)); do
+        local next_candidates
+        next_candidates=$(grep -i "^${search_tokens[$i]}	" "$index" 2>/dev/null | cut -f2 | sort -u)
+        candidates=$(comm -12 <(echo "$candidates") <(echo "$next_candidates"))
+        [ -z "$candidates" ] && return 1
+    done
+
+    # count matches
+    local count
+    count=$(echo "$candidates" | wc -l)
+
+    if [ "$count" -eq 1 ]; then
+        # single match: display it
+        local filepath="$SUBTRACT_SKILLS/${candidates}.md"
+        if [ -f "$filepath" ]; then
+            echo "skill:${candidates}"
+            return 0
+        else
+            # index references deleted file, rebuild and retry
+            bash "$SUBTRACT_DIR/skills-rebuild.sh" > /dev/null 2>&1 || true
+            return 1
+        fi
+    else
+        # multi-match: return list for handler to display
+        local list=""
+        local n=1
+        while IFS= read -r match; do
+            list="${list}${n}. ${match}"$'\n'
+            n=$((n+1))
+        done <<< "$candidates"
+        # cache for "show N" retrieval
+        echo "$candidates" > ${TMPDIR:-/tmp}/.subtract-skills-lastmatch.${USER:-$$}
+        echo "list:${count}"$'\n'"${list}"
+        return 0
+    fi
+    return 1
+}
 
 # --- tier 1: lookup table ---
 
@@ -189,14 +301,163 @@ __subtract_handle() {
         return
     fi
 
-    # kiwix: questions route to local corpus, not model
-    if [[ "$input" == *\? ]]; then
+    # --- skill management commands (before main routing chain) ---
+    local input_lower="${input,,}"
+    case "$input_lower" in
+        "skills")
+            echo "[skill] domains:"
+            ls "$SUBTRACT_SKILLS/" 2>/dev/null | grep -v '^\.' || echo "  (none)"
+            _SUBTRACT_FROM_HANDLER=1
+            return 0
+            ;;
+        "skills rebuild")
+            bash "$SUBTRACT_DIR/skills-rebuild.sh"
+            _SUBTRACT_FROM_HANDLER=1
+            return 0
+            ;;
+        "skills "*)
+            local domain="${input_lower#skills }"
+            if [ -d "$SUBTRACT_SKILLS/$domain" ]; then
+                echo "[skill] $domain:"
+                ls "$SUBTRACT_SKILLS/$domain/" 2>/dev/null | sed 's/\.md$//'
+            else
+                echo "no skills domain: $domain"
+            fi
+            _SUBTRACT_FROM_HANDLER=1
+            return 0
+            ;;
+        "skill add "*)
+            local skill_path="${input#* add }"
+            local skill_dir="$SUBTRACT_SKILLS/$(dirname "$skill_path")"
+            local skill_file="$SUBTRACT_SKILLS/${skill_path}.md"
+            mkdir -p "$skill_dir"
+            if [ ! -f "$skill_file" ]; then
+                cat > "$skill_file" <<'TMPL'
+---
+aliases:
+tags:
+---
+
+TITLE
+
+Steps:
+1.
+TMPL
+            fi
+            ${EDITOR:-vi} "$skill_file"
+            bash "$SUBTRACT_DIR/skills-rebuild.sh"
+            _SUBTRACT_FROM_HANDLER=1
+            return 0
+            ;;
+        "skill rm "*)
+            local skill_path="${input#* rm }"
+            local skill_file="$SUBTRACT_SKILLS/${skill_path}.md"
+            if [ -f "$skill_file" ]; then
+                echo "[DESTRUCTIVE] remove skill: $skill_path"
+                read -r -p "[y/n] " confirm
+                if [ "$confirm" = "y" ]; then
+                    rm "$skill_file"
+                    bash "$SUBTRACT_DIR/skills-rebuild.sh"
+                    echo "removed."
+                else
+                    echo "kept."
+                fi
+            else
+                echo "skill not found: $skill_path"
+            fi
+            _SUBTRACT_FROM_HANDLER=1
+            return 0
+            ;;
+        "show "[0-9]*)
+            local num="${input_lower#show }"
+            if ! [[ "$num" =~ ^[0-9]+$ ]]; then
+                echo "usage: show N (where N is a number)"
+                _SUBTRACT_FROM_HANDLER=1
+                return 0
+            fi
+            local lastmatch="${TMPDIR:-/tmp}/.subtract-skills-lastmatch.${USER:-$$}"
+            if [ -f "$lastmatch" ]; then
+                local match
+                match=$(sed -n "${num}p" "$lastmatch")
+                if [ -n "$match" ] && [ -f "$SUBTRACT_SKILLS/${match}.md" ]; then
+                    echo "[skill:${match}]"
+                    awk '/^---$/{if(!fm){fm=1;next}else if(fm==1){fm=2;next}} fm==1{next} fm==0||fm==2{print}' "$SUBTRACT_SKILLS/${match}.md"
+                    SUBTRACT_LAST_OUTPUT="skill lookup: $match"
+                else
+                    echo "no match at position $num"
+                fi
+            else
+                echo "no recent skill search to show from"
+            fi
+            _SUBTRACT_FROM_HANDLER=1
+            return 0
+            ;;
+    esac
+
+    # --- routing chain: T1(raw) > T1(stripped) > Skills > Kiwix > T2 > T4 ---
+
+    # tier 1 pass 1: exact lookup on raw input
+    result=$(__subtract_lookup "$input")
+    if [ -n "$result" ]; then
+        tier="T1"
+        tag="${result%%	*}"
+        cmd="${result#*	}"
+    fi
+
+    # tier 1 pass 2: strip skills prefix, re-lookup
+    # catches "how do I list my files" -> "list my files" -> T1 match
+    if [ -z "$cmd" ]; then
+        local stripped
+        stripped=$(__subtract_strip_prefix "$input")
+        if [ -n "$stripped" ]; then
+            result=$(__subtract_lookup "$stripped")
+            if [ -n "$result" ]; then
+                tier="T1"
+                tag="${result%%	*}"
+                cmd="${result#*	}"
+            fi
+        fi
+    fi
+
+    # skills: procedural knowledge lookup (prefix match + grep index)
+    if [ -z "$cmd" ]; then
+        local skills_result
+        skills_result=$(__subtract_skills "$input")
+        if [ -n "$skills_result" ]; then
+            if [[ "$skills_result" == skill:* ]]; then
+                # single match: display the skill file
+                local skill_path="${skills_result#skill:}"
+                local skill_file="$SUBTRACT_SKILLS/${skill_path}.md"
+                echo "[skill:${skill_path}]"
+                # strip frontmatter, display content
+                awk '/^---$/{if(!fm){fm=1;next}else if(fm==1){fm=2;next}} fm==1{next} fm==0||fm==2{print}' "$skill_file"
+                SUBTRACT_LAST_OUTPUT="skill lookup: $skill_path"
+                _SUBTRACT_FROM_HANDLER=1
+                return 0
+            elif [[ "$skills_result" == list:* ]]; then
+                # multi-match: show numbered list
+                local header="${skills_result%%$'\n'*}"
+                local count="${header#list:}"
+                echo "[skill] ${count} matches:"
+                echo "$skills_result" | tail -n +2
+                echo "type: show N"
+                SUBTRACT_LAST_OUTPUT="skills search returned ${count} matches"
+                _SUBTRACT_FROM_HANDLER=1
+                return 0
+            fi
+        fi
+    fi
+
+    # kiwix: questions route to local corpus
+    if [ -z "$cmd" ] && [[ "$input" == *\? ]]; then
         local query="${input%\?}"
         local query_lower="${query,,}"
         query_lower="${query_lower#what is }"
         query_lower="${query_lower#what are }"
         query_lower="${query_lower#who is }"
         query_lower="${query_lower#who was }"
+        query_lower="${query_lower#how do i }"
+        query_lower="${query_lower#how to }"
         query="$query_lower"
         local snippet
         snippet=$(__subtract_kiwix "$query")
@@ -206,28 +467,53 @@ __subtract_handle() {
             _SUBTRACT_FROM_HANDLER=1
             return 0
         fi
-        # kiwix miss: fall through to normal tiers
     fi
 
-    # tier 1: local lookup (returns tag<TAB>cmd)
-    result=$(__subtract_lookup "$input")
-    if [ -n "$result" ]; then
-        tier="T1"
-        tag="${result%%	*}"
-        cmd="${result#*	}"
-    else
-        # tier 2: local generative model (if available)
+    # kiwix: also try bare "what is" / "who is" without trailing ?
+    if [ -z "$cmd" ]; then
+        local kiwix_query=""
+        local input_lower="${input,,}"
+        case "$input_lower" in
+            "what is "*|"what are "*|"who is "*|"who was "*|"when was "*|"when did "*|"where is "*|"define "*)
+                case "$input_lower" in
+                    "what is "*) kiwix_query="${input_lower#what is }" ;;
+                    "what are "*) kiwix_query="${input_lower#what are }" ;;
+                    "who is "*) kiwix_query="${input_lower#who is }" ;;
+                    "who was "*) kiwix_query="${input_lower#who was }" ;;
+                    "when was "*) kiwix_query="${input_lower#when was }" ;;
+                    "when did "*) kiwix_query="${input_lower#when did }" ;;
+                    "where is "*) kiwix_query="${input_lower#where is }" ;;
+                    "define "*) kiwix_query="${input_lower#define }" ;;
+                esac
+                ;;
+        esac
+        if [ -n "$kiwix_query" ]; then
+            local snippet
+            snippet=$(__subtract_kiwix "$kiwix_query")
+            if [ -n "$snippet" ]; then
+                echo "[kiwix] $snippet"
+                SUBTRACT_LAST_OUTPUT="kiwix answer for '$input': $(__subtract_truncate "$snippet")"
+                _SUBTRACT_FROM_HANDLER=1
+                return 0
+            fi
+        fi
+    fi
+
+    # tier 2: local generative model (if available)
+    if [ -z "$cmd" ]; then
         cmd=$(__subtract_generate "$input")
         if [ -n "$cmd" ]; then
             tier="T2"
             tag="stdout"
-        else
-            # tier 4: cloud escalation (if configured)
-            cmd=$(__subtract_cloud "$input")
-            if [ -n "$cmd" ]; then
-                tier="T4"
-                tag="stdout"
-            fi
+        fi
+    fi
+
+    # tier 4: cloud escalation (if configured)
+    if [ -z "$cmd" ]; then
+        cmd=$(__subtract_cloud "$input")
+        if [ -n "$cmd" ]; then
+            tier="T4"
+            tag="stdout"
         fi
     fi
 
