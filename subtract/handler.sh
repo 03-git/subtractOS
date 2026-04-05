@@ -231,12 +231,13 @@ __subtract_handle() {
                 eval "$cmd"
                 ;;
             *)
-                output=$(eval "$cmd" 2>&1)
+                local _subtract_tmp="${TMPDIR:-/tmp}/.subtract_out.$$"
+                eval "$cmd" > >(tee "$_subtract_tmp") 2>&1
                 local exit_code=$?
-                echo "$output"
                 if [ $exit_code -eq 0 ]; then
-                    SUBTRACT_LAST_OUTPUT="output of '$cmd': $(__subtract_truncate "$output")"
+                    SUBTRACT_LAST_OUTPUT="output of '$cmd': $(__subtract_truncate "$(cat "$_subtract_tmp")")"
                 fi
+                rm -f "$_subtract_tmp"
                 ;;
         esac
         _SUBTRACT_FROM_HANDLER=1
