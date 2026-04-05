@@ -85,6 +85,10 @@ Full paths always work. `/usr/bin/find`, `/usr/bin/make`, etc. The translation l
 
 Remove the source line from `~/.bashrc` and delete `~/.subtract/`.
 
+## Acknowledgment
+
+subtractOS exists because of `command_not_found_handle`, introduced by [Chet Ramey](https://tiswww.case.edu/php/chet/) in [Bash 4.0](https://tldp.org/LDP/abs/html/bashver4.html) (2009). It was designed as an error-handling hook. We use it as a translation bridge.
+
 ## License
 
 GPL-3.0
